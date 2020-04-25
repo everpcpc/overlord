@@ -28,6 +28,10 @@
             <el-tag size="mini">{{ clusterData.version || '--' }}</el-tag>
           </span>
           </p>
+          <p>集群镜像: <span>
+            <el-tag size="mini">{{ clusterData.image || '--' }}</el-tag>
+          </span>
+          </p>
           <p>组名: <span>{{ GROUP_MAP[clusterData.group] }}</span></p>
           <p>监控连接: <span><a target="_blank" :href="clusterData.monitor">去查看</a></span></p>
         </div>

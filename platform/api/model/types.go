@@ -9,6 +9,7 @@ import (
 type Version struct {
 	CacheType string   `json:"cache_type"`
 	Versions  []string `json:"versions"`
+	Images    []string `json:"images"`
 }
 
 // Job is the json-encodable struct
@@ -36,6 +37,7 @@ type Cluster struct {
 	Thread    int     `json:"cpu" validate:"required"`
 	MaxMemory float64 `json:"max_memory"`
 	Version   string  `json:"version" validate:"required"`
+	Image     string  `json:"image" validate:"required"`
 	Number    int     `json:"number" validate:"required"`
 	Group     string  `json:"group"`
 	Monitor   string  `json:"monitor"`

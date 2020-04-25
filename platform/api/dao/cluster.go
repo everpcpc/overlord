@@ -211,6 +211,7 @@ func (d *Dao) GetCluster(ctx context.Context, cname string) (*model.Cluster, err
 		MaxMemory:    info.MaxMemory,
 		Thread:       info.Thread,
 		Version:      info.Version,
+		Image:        info.Image,
 		Number:       info.Number,
 		State:        clusterState,
 		Instances:    instances,
@@ -395,6 +396,7 @@ func (d *Dao) createCreateClusterJob(p *model.ParamCluster) (*job.Job, error) {
 		OpType:  job.OpCreate,
 		Name:    p.Name,
 		Version: p.Version,
+		Image:   p.Image,
 		Num:     p.Number,
 		Group:   p.Group,
 	}

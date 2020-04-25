@@ -11,6 +11,7 @@ type ParamCluster struct {
 	Appids      []string `json:"appids,split" validate:"gte=0,dive,gte=0"`
 	Spec        string   `json:"spec" validate:"required"`
 	Version     string   `json:"version" validate:"required"`
+	Image       string   `json:"image" validate:"required"`
 	CacheType   string   `json:"cache_type" validate:"required"`
 	TotalMemory float64  `json:"total_memory" validate:"required"`
 	Group       string   `json:"group" validate:"required"`

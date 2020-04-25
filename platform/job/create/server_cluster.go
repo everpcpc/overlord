@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"overlord/platform/chunk"
 	"overlord/pkg/etcd"
 	"overlord/pkg/log"
+	"overlord/platform/chunk"
 	"strings"
 	"text/template"
 )
@@ -121,6 +121,11 @@ func (c *RedisClusterJob) buildTplTree() (err error) {
 			}
 
 			err = c.e.Set(ctx, fmt.Sprintf("%s/version", instanceDir), c.info.Version)
+			if err != nil {
+				return err
+			}
+
+			err = c.e.Set(ctx, fmt.Sprintf("%s/image", instanceDir), c.info.Image)
 			if err != nil {
 				return err
 			}

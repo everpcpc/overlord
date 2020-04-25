@@ -14,10 +14,12 @@ stdout = true
 [[versions]]                    # 版本信息
   cache_type = "redis"
   versions = ["4.0.11", "3.2.8"]
+  images = ["redis:4.0.11", "redis:3.2.8"]
 
 [[versions]]
   cache_type = "redis_cluster"
   versions = ["4.0.11", "3.2.8", "5.0"]
+  images = ["redis:4.0.11", "redis:3.2.8", "redis:5.0"]
 
 [[versions]]
   cache_type = "memcache"

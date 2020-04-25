@@ -12,7 +12,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
+	"overlord/pkg/container"
 	"overlord/pkg/dir"
 	"overlord/pkg/etcd"
 	"overlord/pkg/log"
@@ -47,6 +49,7 @@ type DeployInfo struct {
 
 	Port    int
 	Version string
+	Image   string
 	Role    string
 
 	// TplTree is the Tree which contains a key as path of the file,
@@ -121,6 +124,11 @@ func GenDeployInfo(e *etcd.Etcd, ip string, port int) (info *DeployInfo, err err
 	info.Cluster, _ = e.Get(sub, fmt.Sprintf("%s/cluster", instanceDir))
 
 	info.Version, err = e.Get(sub, fmt.Sprintf("%s/version", instanceDir))
+	if err != nil {
+		return
+	}
+
+	info.Image, err = e.Get(sub, fmt.Sprintf("%s/image", instanceDir))
 	return
 }
 
@@ -335,8 +343,7 @@ func cleanDirtyDir(port int) error {
 	return os.RemoveAll(fmt.Sprintf(_workDir, port))
 }
 
-// SetupCacheService will create new cache service
-func SetupCacheService(info *DeployInfo) (p *proc.Proc, err error) {
+func setupWorkDir(info *DeployInfo) (workdir string, err error) {
 	// 0 . clean dir before
 	err = cleanDirtyDir(info.Port)
 	if err != nil {
@@ -355,7 +362,7 @@ func SetupCacheService(info *DeployInfo) (p *proc.Proc, err error) {
 
 	// 2. execute given command
 	//   2.0 mk working dir
-	workdir := fmt.Sprintf(_workDir, info.Port)
+	workdir = fmt.Sprintf(_workDir, info.Port)
 	err = dir.MkDirAll(workdir)
 	if err != nil {
 		log.Errorf("fail to create working dir")
@@ -364,6 +371,17 @@ func SetupCacheService(info *DeployInfo) (p *proc.Proc, err error) {
 	err = renderMetaIntoFile(workdir, info)
 	if err != nil {
 		log.Errorf("fail to create meta data file due to %s", err)
+		return
+	}
+
+	return
+}
+
+// SetupCacheService will create new cache service
+func SetupCacheService(info *DeployInfo) (p *proc.Proc, err error) {
+	// 1. setup workdir with metadata
+	_, err = setupWorkDir(info)
+	if err != nil {
 		return
 	}
 
@@ -377,6 +395,32 @@ func SetupCacheService(info *DeployInfo) (p *proc.Proc, err error) {
 
 	p = newproc(info.CacheType, info.Version, info.Port)
 	err = p.Start()
+	return
+}
+
+// SetupCacheContainer will create new cache service with container
+func SetupCacheContainer(info *DeployInfo) (c *container.Container, err error) {
+	workdir, err := setupWorkDir(info)
+	if err != nil {
+		return
+	}
+	var containerName string
+	var cmd []string
+
+	switch info.CacheType {
+	case types.CacheTypeMemcache, types.CacheTypeMemcacheBinary:
+		containerName = fmt.Sprintf("memcache-%s-%d", info.Cluster, info.Port)
+		cmd = []string{"memcached", "-l", "0.0.0.0", "-p", strconv.Itoa(info.Port)}
+	case types.CacheTypeRedis, types.CacheTypeRedisCluster:
+		containerName = fmt.Sprintf("redis-%s-%d", info.Cluster, info.Port)
+		cmd = []string{"redis-server", filepath.Join(workdir, "redis.conf")}
+	}
+
+	c, err = container.New(info.Image, containerName, workdir, cmd)
+	if err != nil {
+		return
+	}
+	err = c.Start()
 	return
 }
 

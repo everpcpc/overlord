@@ -110,6 +110,11 @@ func (c *CacheJob) buildTplTree() error {
 			return err
 		}
 
+		err = c.e.Set(ctx, fmt.Sprintf("%s/image", instanceDir), c.info.Image)
+		if err != nil {
+			return err
+		}
+
 		err = c.e.Set(ctx, fmt.Sprintf("%s/jobid", instanceDir), c.info.JobID)
 		if err != nil {
 			return err

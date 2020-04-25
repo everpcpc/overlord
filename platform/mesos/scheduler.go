@@ -517,6 +517,7 @@ func (s *Scheduler) dispatchCluster(t job.Job, num int, mem, cpu float64, offers
 		Name:      t.Name,
 		JobID:     t.ID,
 		Version:   t.Version,
+		Image:     t.Image,
 		Number:    t.Num,
 		Group:     t.Group,
 	})

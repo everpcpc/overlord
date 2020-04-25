@@ -44,10 +44,21 @@
           </el-tooltip>
         </el-form-item>
 
-        <el-form-item label="版本" prop="version" required>
+        <el-form-item label="版本" prop="version">
           <el-radio-group v-model="clusterForm.version">
-            <el-radio :label="item" v-for="(item, index) in versionOptions" :key="index">{{ item }}</el-radio>
+            <el-radio :label="item" v-for="(item, index) in versionOptions.concat(['image'])" :key="index">{{ item }}</el-radio>
           </el-radio-group>
+        </el-form-item>
+
+        <el-form-item label="镜像" prop="image" v-if="clusterForm.version === 'image'">
+          <el-select v-model="clusterForm.image" placeholder="请选择">
+            <el-option
+              v-for="item in imageOptions"
+              :key="item"
+              :label="item"
+              :value="item">
+            </el-option>
+          </el-select>
         </el-form-item>
 
         <el-form-item label="型号" required>
@@ -168,6 +179,7 @@ export default {
         spec: '0.25c2g',
         total_memory: null,
         version: null,
+        image: null,
         group: 'sh001',
         appids: []
       },
@@ -176,6 +188,7 @@ export default {
       groupOptions: GROUP_OPTIONS,
       allVersionOptions: [],
       versionOptions: [],
+      imageOptions: [],
       specCustomForm: {
         core: null,
         memory: null
@@ -201,16 +214,18 @@ export default {
     },
     typeChange () {
       this.clusterForm.version = null
+      this.clusterForm.image = null
       this.versionOptions = []
+      this.imageOptions = []
       this.versionOptions = this.allVersionOptions.find(item => item.cache_type === this.clusterForm.cache_type).versions
-      this.clusterForm.version = this.versionOptions[0]
+      this.imageOptions = this.allVersionOptions.find(item => item.cache_type === this.clusterForm.cache_type).images
     },
     async getVersions () {
       try {
         const { data } = await getVersionsApi()
         this.allVersionOptions = data.items
         this.versionOptions = this.allVersionOptions.find(item => item.cache_type === this.clusterForm.cache_type).versions
-        this.clusterForm.version = this.versionOptions[0]
+        this.imageOptions = this.allVersionOptions.find(item => item.cache_type === this.clusterForm.cache_type).images
       } catch (_) {
         this.$message.error('版本列表获取失败')
       }
@@ -227,7 +242,6 @@ export default {
     resetForm (formName) {
       this.$refs[formName].resetFields()
       // this.clusterForm.spec = null
-      this.clusterForm.version = this.versionOptions[0]
       this.memoryUnit = 'G'
       this.specMemoryUnit = 'G'
     },

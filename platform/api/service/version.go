@@ -6,7 +6,11 @@ import "overlord/platform/api/model"
 func (s *Service) GetAllVersions() ([]*model.Version, error) {
 	versions := make([]*model.Version, len(s.cfg.Versions))
 	for i, version := range s.cfg.Versions {
-		versions[i] = &model.Version{CacheType: version.CacheType, Versions: version.Versions}
+		versions[i] = &model.Version{
+			CacheType: version.CacheType,
+			Versions:  version.Versions,
+			Images:    version.Images,
+		}
 	}
 	return versions, nil
 }
