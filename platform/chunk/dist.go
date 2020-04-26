@@ -44,10 +44,11 @@ func mapHostResIntoDist(hrs []*hostRes, portsMap map[string][]int) *Dist {
 // DistIt will cacluate Dist by the given offer.
 func DistIt(num int, mem, cpu float64, offers ...ms.Offer) (dist *Dist, err error) {
 	hrs := dpFillHostRes(nil, nil, mapIntoHostRes(offers, mem, cpu), num, 1)
-	if !checkDist(hrs, num) {
-		err = ErrBadDist
-		return
-	}
+	fmt.Printf("distit: %+v\n", hrs)
+	// if !checkDist(hrs, num) {
+	// 	err = ErrBadDist
+	// 	return
+	// }
 	portsMap := mapIntoPortsMap(offers)
 	dist = mapHostResIntoDist(hrs, portsMap)
 	return

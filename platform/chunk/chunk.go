@@ -310,10 +310,10 @@ func Chunks(masterNum int, memory, cpu float64, offers ...ms.Offer) (chunks []*C
 	if err != nil {
 		return
 	}
-	if !checkDist(hrs, masterNum*2) {
-		err = ErrBadDist
-		return
-	}
+	// if !checkDist(hrs, masterNum*2) {
+	// 	err = ErrBadDist
+	// 	return
+	// }
 
 	hrmap := make(map[string]int)
 	for i, hr := range hrs {
@@ -376,10 +376,10 @@ func ChunksAppend(chunks []*Chunk, masterNum int, memory, cpu float64, offers ..
 	if err != nil {
 		return
 	}
-	if !checkDist(hrs, (len(chunks)*2+masterNum)*2) {
-		err = ErrBadDist
-		return
-	}
+	// if !checkDist(hrs, (len(chunks)*2+masterNum)*2) {
+	// 	err = ErrBadDist
+	// 	return
+	// }
 	hrmap := make(map[string]int)
 	for i, hr := range hrs {
 		hrmap[hr.name] = i
@@ -469,7 +469,7 @@ func ChunksRecover(chunks []*Chunk, host string, memory, cpu float64, offers ...
 	var (
 		relateHost = make(map[string]struct{}, 0)
 		dpCount    int
-		allCount   = len(chunks) * 4
+		// allCount   = len(chunks) * 4
 	)
 	newChunk = make([]*Chunk, 0, len(chunks))
 	for _, chunk := range chunks {
@@ -496,10 +496,10 @@ func ChunksRecover(chunks []*Chunk, host string, memory, cpu float64, offers ...
 		hrmap[hr.name] = i
 	}
 	hrs = dpFillHostRes(chunks, relateHost, hrs, dpCount, 2)
-	if !checkDist(hrs, allCount) {
-		err = ErrBadDist
-		return
-	}
+	// if !checkDist(hrs, allCount) {
+	// 	err = ErrBadDist
+	// 	return
+	// }
 	hcount := len(hrs)
 
 	linkTable := make([][]int, hcount)
