@@ -1,5 +1,5 @@
 listen = "0.0.0.0:8880"
-etcd = "http://127.0.0.1:2379"
+etcd = "http://test-zk1:2379"
 log_vl = 10
 log = "info"
 debug = true
@@ -14,12 +14,12 @@ stdout = true
 [[versions]]                    # 版本信息
   cache_type = "redis"
   versions = ["4.0.11", "3.2.8"]
-  images = ["redis:4.0.11", "redis:3.2.8"]
+  images = ["mirror.docker.douban/library/redis:4.0.11", "mirror.docker.douban/library/redis:3.2.8"]
 
 [[versions]]
   cache_type = "redis_cluster"
   versions = ["4.0.11", "3.2.8", "5.0"]
-  images = ["redis:4.0.11", "redis:3.2.8", "redis:5.0"]
+  images = ["mirror.docker.douban/library/redis:4.0.11", "mirror.docker.douban/library/redis:3.2.8", "mirror.docker.douban/library/redis:5.0"]
 
 [[versions]]
   cache_type = "memcache"
