@@ -1,6 +1,8 @@
 package mesos
 
 import (
+	"net"
+	"overlord/pkg/log"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -43,4 +45,24 @@ func parseTaskID(t ms.TaskID) (cluster, ip, port string, id int64, err error) {
 	ip = host[:idx]
 	port = host[idx+1:]
 	return
+}
+
+// validateIPAddress check if given hostname is a valid ipaddress
+// and try to resolve if not.
+// Return original host if resolving failed
+func validateIPAddress(hostname string) string {
+	ip := net.ParseIP(hostname)
+	if ip != nil {
+		return ip.String()
+	}
+	addr, err := net.LookupIP(hostname)
+	if err != nil {
+		log.Warnf("error resolving hostname %s: %+v", hostname, err)
+		return hostname
+	}
+	if len(addr) == 0 {
+		log.Warnf("hostname %s could not be resolved", hostname)
+		return hostname
+	}
+	return addr[0].String()
 }
