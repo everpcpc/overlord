@@ -181,15 +181,14 @@
 </template>
 
 <script>
-import { patchInstanceWeightApi, deleteClusterApi, restartInstanceApi } from '@/http/api'
-import GROUP_MAP from '@/constants/GROUP'
+import { patchInstanceWeightApi, deleteClusterApi, restartInstanceApi, getGroupsApi } from '@/http/api'
 import { mapState } from 'vuex'
 
 // mapGetters
 export default {
   data () {
     return {
-      GROUP_MAP,
+      groupMap: {},
       multipleSelection: [],
       stateMap: {
         running: 'success',
@@ -209,6 +208,7 @@ export default {
     })
   },
   created () {
+    this.getGroups()
     this.getClusterData()
   },
   methods: {
@@ -218,6 +218,17 @@ export default {
         index,
         weightValue: value
       })
+    },
+    async getGroups () {
+      try {
+        const { data } = await getGroupsApi()
+        this.groupMap = data.items.reduce(function (map, obj) {
+          map[obj.name] = obj.name_cn
+          return map
+        }, {})
+      } catch (_) {
+        this.$message.error('分组列表获取失败')
+      }
     },
     async getClusterData () {
       if (!this.$route.params.name) return
