@@ -15,7 +15,16 @@ var (
 // Run the whole overlord app
 func Run(cfg *model.ServerConfig, s *service.Service) {
 	svc = s
-	engine := gin.Default()
+
+	engine := gin.New()
+	engine.Use(gin.LoggerWithConfig(gin.LoggerConfig{
+		SkipPaths: []string{"/ping"},
+	}))
+	engine.Use(gin.Recovery())
+	engine.GET("/ping", func(c *gin.Context) {
+		c.String(200, "pong")
+	})
+
 	initRouter(engine)
 	if err := engine.Run(cfg.Listen); err != nil {
 		log.Errorf("engine start fail due to %v", err)
