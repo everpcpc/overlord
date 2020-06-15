@@ -11,7 +11,7 @@ const slotsCount = 16384
 
 // errors
 var (
-	ErrAbsentField   = errs.New("Node fields is absent")
+	ErrAbsentField   = errs.New("node fields is absent")
 	ErrEmptyNodeLine = errs.New("empty line of cluster nodes")
 	ErrParseNodeSlot = errs.New("error when parse nodes slots")
 )
@@ -215,10 +215,7 @@ func (n *node) isNormal() bool {
 			return false
 		}
 	}
-	if n.linkState != "connected" {
-		return false
-	}
-	return true
+	return n.linkState == "connected"
 }
 
 func parseSlotField(val string) ([]int, bool) {
