@@ -75,6 +75,7 @@ func (c *CacheJob) buildTplTree() error {
 
 		if c.info.CacheType == types.CacheTypeRedis {
 			data := map[string]interface{}{
+				"WorkDir":          fmt.Sprintf(_workDir, c.info.Name, addr.Port),
 				"Port":             addr.Port,
 				"MaxMemoryInBytes": int(c.info.MaxMemory * 1024 * 1024),
 			}

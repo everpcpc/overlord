@@ -2,7 +2,7 @@ package create
 
 var memcacheScriptTpl = `
 #!/bin/bash
-/data/lib/memcache/{{.Version}}/bin/memcached -u root -p {{.Port}} -A -l 0.0.0.0 -m {{.MaxMemory}} -t {{.Thread}}`
+exec /data/lib/memcache/{{.Version}}/bin/memcached -u root -p {{.Port}} -A -l 0.0.0.0 -m {{.MaxMemory}} -t {{.Thread}}`
 
 var redisconfTpl = `
 bind 0.0.0.0
@@ -13,15 +13,14 @@ timeout 0
 tcp-keepalive 300
 daemonize no
 supervised no
-pidfile redis.pid
 loglevel notice
-logfile /data/{{.Port}}/redis.log
+logfile {{.WorkDir}}/redis.log
 databases 16
 always-show-logo yes
 stop-writes-on-bgsave-error no
 rdbcompression yes
 rdbchecksum yes
-dir /data/{{.Port}}/
+dir {{.WorkDir}}
 slave-serve-stale-data yes
 slave-read-only yes
 repl-diskless-sync no
@@ -76,15 +75,14 @@ timeout 0
 tcp-keepalive 300
 daemonize no
 supervised no
-pidfile redis.pid
 loglevel notice
-logfile /data/{{.Port}}/redis.log
+logfile {{.WorkDir}}/redis.log
 databases 16
 always-show-logo yes
 stop-writes-on-bgsave-error no
 rdbcompression yes
 rdbchecksum yes
-dir /data/{{.Port}}/
+dir {{.WorkDir}}
 slave-serve-stale-data yes
 slave-read-only yes
 repl-diskless-sync no
@@ -109,7 +107,7 @@ aof-load-truncated yes
 aof-use-rdb-preamble no
 lua-time-limit 5000
 cluster-enabled yes
-cluster-config-file /data/{{.Port}}/nodes.conf
+cluster-config-file {{.WorkDir}}/nodes.conf
 cluster-node-timeout 15000
 slowlog-log-slower-than 10000
 slowlog-max-len 1024
