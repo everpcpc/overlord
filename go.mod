@@ -5,8 +5,6 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Pallinder/go-randomdata v1.1.0
 	github.com/aviddiviner/go-murmur v0.0.0-20150519214947-b9740d71e571
-	github.com/bouk/monkey v1.0.1
-	github.com/bradfitz/gomemcache v0.0.0-20190329173943-551aad21a668
 	github.com/dvyukov/go-fuzz v0.0.0-20190402070214-9cfa592d5792
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gin-contrib/sse v0.0.0-20170109093832-22d885f9ecc7 // indirect
