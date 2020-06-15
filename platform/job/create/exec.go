@@ -29,7 +29,7 @@ import (
 const binaryLock = "./binary.lock"
 
 var (
-	_workDir  = "/data/%d"
+	_workDir  = "/data/overlord/%d"
 	redispath = "/data/lib/redis/%s/bin/redis-server"
 	redisconf = "/data/%d/redis.conf"
 )
@@ -278,7 +278,7 @@ func extractTarGz(baseDir string, gzipStream io.Reader) error {
 		return err
 	}
 
-	for true {
+	for {
 		header, err := tarReader.Next()
 
 		if err == io.EOF {
