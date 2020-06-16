@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"overlord/pkg/container"
 	"overlord/pkg/dir"
@@ -29,7 +28,7 @@ import (
 const binaryLock = "./binary.lock"
 
 var (
-	_workDir  = "/data/overlord/%d"
+	_workDir  = "/data/overlord/%s-%d"
 	redispath = "/data/lib/redis/%s/bin/redis-server"
 	redisconf = "/data/%d/redis.conf"
 )
@@ -62,10 +61,9 @@ type DeployInfo struct {
 // GenDeployInfo will create new deploy info from etcd
 func GenDeployInfo(e *etcd.Etcd, ip string, port int) (info *DeployInfo, err error) {
 	var (
-		val         string
-		instanceDir = fmt.Sprintf(etcd.InstanceDir, ip, port)
-		workdir     = fmt.Sprintf(_workDir, port)
-		cinfo       CacheInfo
+		val, workdir string
+		instanceDir  = fmt.Sprintf(etcd.InstanceDir, ip, port)
+		cinfo        CacheInfo
 	)
 
 	sub, cancel := context.WithCancel(context.Background())
@@ -96,6 +94,8 @@ func GenDeployInfo(e *etcd.Etcd, ip string, port int) (info *DeployInfo, err err
 	}
 	// NOTE:(everpcpc) more info could be extracted from clusterinfo
 	info.Image = cinfo.Image
+
+	workdir = fmt.Sprintf(_workDir, info.Cluster, port)
 
 	if info.CacheType == types.CacheTypeRedisCluster {
 		val, err = e.Get(sub, fmt.Sprintf("%s/role", instanceDir))
@@ -350,13 +350,13 @@ func buildServiceName(cacheType types.CacheType, version string, port int) strin
 // 	return tpl.Execute(fd, map[string]string{"Version": info.Version})
 // }
 
-func cleanDirtyDir(port int) error {
-	return os.RemoveAll(fmt.Sprintf(_workDir, port))
+func cleanDirtyDir(cluster string, port int) error {
+	return os.RemoveAll(fmt.Sprintf(_workDir, cluster, port))
 }
 
 func setupWorkDir(info *DeployInfo) (workdir string, err error) {
 	// 0 . clean dir before
-	err = cleanDirtyDir(info.Port)
+	err = cleanDirtyDir(info.Cluster, info.Port)
 	if err != nil {
 		log.Warnf("error when clean dirty dir /data/%d", info.Port)
 		return
@@ -373,7 +373,7 @@ func setupWorkDir(info *DeployInfo) (workdir string, err error) {
 
 	// 2. execute given command
 	//   2.0 mk working dir
-	workdir = fmt.Sprintf(_workDir, info.Port)
+	workdir = fmt.Sprintf(_workDir, info.Cluster, info.Port)
 	err = dir.MkDirAll(workdir)
 	if err != nil {
 		log.Errorf("fail to create working dir")
@@ -421,7 +421,7 @@ func SetupCacheContainer(info *DeployInfo) (c *container.Container, err error) {
 	switch info.CacheType {
 	case types.CacheTypeMemcache, types.CacheTypeMemcacheBinary:
 		containerName = fmt.Sprintf("memcache-%s-%d", info.Cluster, info.Port)
-		cmd = []string{"memcached", "-l", "0.0.0.0", "-p", strconv.Itoa(info.Port)}
+		cmd = []string{filepath.Join(workdir, "memcache.sh")}
 	case types.CacheTypeRedis, types.CacheTypeRedisCluster:
 		containerName = fmt.Sprintf("redis-%s-%d", info.Cluster, info.Port)
 		cmd = []string{"redis-server", filepath.Join(workdir, "redis.conf")}

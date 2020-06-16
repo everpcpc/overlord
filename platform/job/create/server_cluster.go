@@ -98,6 +98,7 @@ func (c *RedisClusterJob) buildTplTree() (err error) {
 
 			sb.Reset()
 			err = tpl.Execute(&sb, map[string]interface{}{
+				"WorkDir":          fmt.Sprintf(_workDir, c.info.Name, node.Port),
 				"Port":             node.Port,
 				"MaxMemoryInBytes": int(c.info.MaxMemory * 1024 * 1024),
 			})
