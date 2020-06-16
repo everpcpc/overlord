@@ -1,4 +1,4 @@
-FROM golang:alpine as cmd-builder
+FROM golang:buster as cmd-builder
 
 ENV GO111MODULE=on
 
@@ -14,12 +14,11 @@ ADD ./web /web
 RUN cd /web && npm install && npm run build
 
 
-FROM alpine
+FROM nginx:stable
 
 WORKDIR /app
 
 COPY --from=cmd-builder /go/bin/* /usr/local/bin/
 COPY --from=web-builder /web/dist/ /app/web/
 
-RUN apk add --no-cache nginx
 COPY web/nginx.conf /etc/nginx/nginx.conf
