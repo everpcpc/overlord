@@ -38,6 +38,11 @@ func New(image, name, workdir string, cmd []string) (c *Container, err error) {
 		return
 	}
 
+	err = c.removeExisting(name)
+	if err != nil {
+		return
+	}
+
 	var output io.ReadCloser
 	output, err = c.cli.ImagePull(ctx, image, types.ImagePullOptions{})
 	if err != nil {
@@ -61,6 +66,25 @@ func New(image, name, workdir string, cmd []string) (c *Container, err error) {
 		return
 	}
 	c.id = resp.ID
+	return
+}
+func (c *Container) removeExisting(name string) (err error) {
+	containers, err := c.cli.ContainerList(c.ctx, types.ContainerListOptions{})
+	if err != nil {
+		return
+	}
+	var existing string
+	for _, container := range containers {
+		if container.Names[0] == "/"+name {
+			existing = container.ID
+			if container.Status != "running" {
+				break
+			}
+		}
+	}
+	if existing != "" {
+		err = c.cli.ContainerRemove(c.ctx, existing, types.ContainerRemoveOptions{})
+	}
 	return
 }
 
