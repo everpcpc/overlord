@@ -158,7 +158,6 @@
         <div class="cluster-danger__item">
           <p>删除: 请看我的坚定的眼神(๑•̀ㅂ•́)و我就是要删掉这个集群( *・ω・)✄╰ひ╯</p>
           <el-button @click="deleteClusterDialogVisible = true"
-            :disabled="clusterData.state === 'waiting'"
             type="danger"
             icon="el-icon-delete">删除</el-button>
         </div>
