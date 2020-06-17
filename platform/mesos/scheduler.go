@@ -253,19 +253,28 @@ func (s *Scheduler) declineAndSuppress(offers []ms.Offer, ctx context.Context) {
 func (s *Scheduler) tryRecovery(t ms.TaskID, offers []ms.Offer, force bool) (err error) {
 
 	var (
-		cluster, port string
-		info          *create.CacheInfo
-		ip            string
-		id            int64
+		cluster, port   string
+		info            *create.CacheInfo
+		ip              string
+		id              int64
+		offersToDecline []ms.OfferID
 	)
 	defer func() {
+		// decline all offers if error occurs
 		if err != nil {
+			offersToDecline = make([]ms.OfferID, len(offers))
 			for _, offer := range offers {
-				decline := calls.Decline(offer.ID)
-				calls.CallNoData(context.Background(), s.cli, decline)
+				offersToDecline = append(offersToDecline, offer.ID)
+			}
+		}
+		if len(offersToDecline) > 0 {
+			decline := calls.Decline(offersToDecline...)
+			if e := calls.CallNoData(context.Background(), s.cli, decline); e != nil {
+				log.Errorf("decline offer failed: %v", e)
 			}
 		}
 	}()
+
 	cluster, ip, port, id, err = parseTaskID(t)
 	if err != nil {
 		log.Errorf("cannot reovery task(%s) with err taskid ", t.String())
@@ -295,30 +304,35 @@ func (s *Scheduler) tryRecovery(t ms.TaskID, offers []ms.Offer, force bool) (err
 	}
 	task.Data, _ = json.Marshal(data)
 	for _, offer := range offers {
-		agentIP := chunk.ValidateIPAddress(offer.Hostname)
-		// try to recover from origin agent with the same info.
-		if agentIP == ip {
-			if err = checkOffer(offer, info.CPU, info.MaxMemory, uport); err != nil {
-				return
-			}
-			task.AgentID = offer.GetAgentID()
-			s.db.SetTaskID(context.Background(), task.Name, task.TaskID.GetValue()+","+task.AgentID.GetValue())
-			accept := calls.Accept(calls.OfferOperations{calls.OpLaunch(*task)}.WithOffers(offer.ID))
-			err = calls.CallNoData(context.Background(), s.cli, accept)
-			if err == nil {
-				log.Info("recover task successfully")
-				// decline other offer
-				for _, offer := range offers {
-					if agentIP != ip {
-						decline := calls.Decline(offer.ID)
-						calls.CallNoData(context.Background(), s.cli, decline)
-					}
-				}
-				return
-			}
-			log.Errorf("try recover task from origin agent fail %v", err)
+		if chunk.ValidateIPAddress(offer.Hostname) != ip {
+			continue
 		}
+
+		// try to recover from origin agent with the same info.
+		if err = checkOffer(offer, info.CPU, info.MaxMemory, uport); err != nil {
+			return
+		}
+		task.AgentID = offer.GetAgentID()
+		s.db.SetTaskID(context.Background(), task.Name, task.TaskID.GetValue()+","+task.AgentID.GetValue())
+		accept := calls.Accept(calls.OfferOperations{calls.OpLaunch(*task)}.WithOffers(offer.ID))
+		err = calls.CallNoData(context.Background(), s.cli, accept)
+		if err != nil {
+			log.Errorf("try recover task from origin agent fail %v", err)
+			// try recovery from other host later
+			break
+		}
+
+		log.Info("recover task successfully")
+
+		// decline other offer
+		for _, offer := range offers {
+			if chunk.ValidateIPAddress(offer.Hostname) != ip {
+				offersToDecline = append(offersToDecline, offer.ID)
+			}
+		}
+		return
 	}
+
 	// can not recovery from origin host,try to scale by append.
 	switch info.CacheType {
 	case types.CacheTypeMemcache, types.CacheTypeRedis:
