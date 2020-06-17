@@ -22,6 +22,8 @@ type Config struct {
 	Roles      []string `toml:"role"`
 	Hostname   string   `toml:"hostname"`
 	Principal  string   `toml:"principal"`
+	Password   string   `toml:"password"`
+	BasicAuth  bool     `toml:"basic_auth"`
 	DBType     string   `toml:"db_type"`      //Type of the database etcd/zk
 	DBEndPoint string   `toml:"db_end_point"` //Endpoint of the database
 
