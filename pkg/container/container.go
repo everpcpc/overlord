@@ -76,9 +76,9 @@ func (c *Container) removeExisting(name string) (err error) {
 	var existing string
 	for _, container := range containers {
 		for _, _name := range container.Names {
-			if _name == name {
+			if _name == "/"+name {
 				existing = container.ID
-				if container.Status == "running" {
+				if container.State == "running" {
 					err = fmt.Errorf("container %s is running", name)
 					return
 				}
