@@ -44,3 +44,9 @@ func parseTaskID(t ms.TaskID) (cluster, ip, port string, id int64, err error) {
 	port = host[idx+1:]
 	return
 }
+
+func protoString(s string) *string { return &s }
+
+func protoFloat64(f float64) *float64 { return &f }
+
+func protoBool(b bool) *bool { return &b }
