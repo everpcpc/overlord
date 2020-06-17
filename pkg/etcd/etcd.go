@@ -4,6 +4,7 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -60,10 +61,19 @@ type Etcd struct {
 
 //New Function to create an etce object
 func New(endpoint string) (e *Etcd, err error) {
+	var u *url.URL
+	u, err = url.Parse(endpoint)
+	if err != nil {
+		return
+	}
+	pwd, _ := u.User.Password()
+
 	e = &Etcd{}
 	e.cfg = cli.Config{
-		Endpoints: []string{endpoint},
+		Endpoints: []string{fmt.Sprintf("%s://%s/", u.Scheme, u.Host)},
 		Transport: cli.DefaultTransport,
+		Username:  u.User.Username(),
+		Password:  pwd,
 		// set timeout per request to fail fast when the target endpoint is unavailable
 		HeaderTimeoutPerRequest: time.Second * 2,
 	}
