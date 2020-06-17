@@ -118,13 +118,19 @@ func (s *Scheduler) taskEvent(ch chan *cli.Node) {
 }
 
 func buildHTTPSched(cfg *Config) calls.Caller {
+	var authConfigOpt httpcli.ConfigOpt
+	if cfg.BasicAuth {
+		authConfigOpt = httpcli.BasicAuth(cfg.Principal, cfg.Password)
+	}
 	cli := httpcli.New(
 		httpcli.Endpoint(fmt.Sprintf("http://%s/api/v1/scheduler", cfg.Master)),
 		httpcli.Codec(codecs.ByMediaType[codecs.MediaTypeProtobuf]),
-		httpcli.Do(httpcli.With(httpcli.Timeout(time.Second))),
+		httpcli.Do(httpcli.With(
+			authConfigOpt,
+			httpcli.Timeout(time.Second),
+		)),
 	)
-	return httpsched.NewCaller(cli, httpsched.Listener(func(n httpsched.Notification) {
-	}))
+	return httpsched.NewCaller(cli)
 }
 
 func (s *Scheduler) buildFrameworkInfo() *ms.FrameworkInfo {
