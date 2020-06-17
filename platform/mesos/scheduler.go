@@ -238,7 +238,7 @@ func (s *Scheduler) resourceOffers() events.HandlerFunc {
 }
 
 func (s *Scheduler) declineAndSuppress(offers []ms.Offer, ctx context.Context) {
-	ofid := make([]ms.OfferID, len(offers))
+	ofid := make([]ms.OfferID, 0, len(offers))
 	for _, offer := range offers {
 		ofid = append(ofid, offer.ID)
 	}
@@ -262,7 +262,7 @@ func (s *Scheduler) tryRecovery(t ms.TaskID, offers []ms.Offer, force bool) (err
 	defer func() {
 		// decline all offers if error occurs
 		if err != nil {
-			offersToDecline = make([]ms.OfferID, len(offers))
+			offersToDecline = make([]ms.OfferID, 0, len(offers))
 			for _, offer := range offers {
 				offersToDecline = append(offersToDecline, offer.ID)
 			}
