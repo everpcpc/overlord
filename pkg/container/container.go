@@ -74,19 +74,25 @@ func (c *Container) removeExisting(name string) (err error) {
 		return
 	}
 	var existing string
+containersLoop:
 	for _, container := range containers {
 		for _, _name := range container.Names {
-			if _name == "/"+name {
-				existing = container.ID
-				if container.State == "running" {
-					err = fmt.Errorf("container %s is running", name)
-					return
-				}
+			if _name != "/"+name {
+				continue
 			}
+			if container.State == "running" {
+				err = fmt.Errorf("container %s is running", name)
+				return
+			}
+			existing = container.ID
+			break containersLoop
 		}
 	}
 	if existing != "" {
+		log.Infof("removing previous stopped container %s", name)
 		err = c.cli.ContainerRemove(c.ctx, existing, types.ContainerRemoveOptions{})
+		// wait for the container to be removed
+		time.Sleep(3 * time.Second)
 	}
 	return
 }
