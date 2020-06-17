@@ -69,7 +69,7 @@ func New(image, name, workdir string, cmd []string) (c *Container, err error) {
 	return
 }
 func (c *Container) removeExisting(name string) (err error) {
-	containers, err := c.cli.ContainerList(c.ctx, types.ContainerListOptions{})
+	containers, err := c.cli.ContainerList(c.ctx, types.ContainerListOptions{All: true})
 	if err != nil {
 		return
 	}
@@ -91,8 +91,6 @@ containersLoop:
 	if existing != "" {
 		log.Infof("removing previous stopped container %s", name)
 		err = c.cli.ContainerRemove(c.ctx, existing, types.ContainerRemoveOptions{})
-		// wait for the container to be removed
-		time.Sleep(3 * time.Second)
 	}
 	return
 }
