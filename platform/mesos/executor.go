@@ -345,10 +345,6 @@ func (ec *Executor) update(status ms.TaskStatus) error {
 	return err
 }
 
-func protoString(s string) *string { return &s }
-
-func protoFloat64(f float64) *float64 { return &f }
-
 func (ec *Executor) kill(id ms.TaskID) {
 	status := ec.newStatus(id)
 	status.State = ms.TASK_KILLED.Enum()

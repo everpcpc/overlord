@@ -16,7 +16,6 @@ import (
 	"overlord/platform/job"
 	"overlord/platform/job/create"
 
-	pb "github.com/golang/protobuf/proto"
 	ms "github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/scheduler/callrules"
@@ -430,13 +429,13 @@ func (s *Scheduler) getInfoFromEtcd(ctx context.Context, cluster string) (t *cre
 
 func (s *Scheduler) buildExcutor(name string, rs []ms.Resource) *ms.ExecutorInfo {
 	executorUris := []ms.CommandInfo_URI{}
-	executorUris = append(executorUris, ms.CommandInfo_URI{Value: s.c.ExecutorURL, Executable: pb.Bool(true)})
+	executorUris = append(executorUris, ms.CommandInfo_URI{Value: s.c.ExecutorURL, Executable: protoBool(true)})
 	exec := &ms.ExecutorInfo{
 		Type:       ms.ExecutorInfo_CUSTOM,
 		ExecutorID: ms.ExecutorID{Value: name},
 		Name:       &name,
 		Command: &ms.CommandInfo{
-			Value: pb.String("./executor"),
+			Value: protoString("./executor"),
 			URIs:  executorUris,
 		},
 		Resources: rs,
