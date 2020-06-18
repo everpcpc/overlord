@@ -15,7 +15,6 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gin-gonic/gin v1.6.3
 	github.com/gofrs/flock v0.7.1
-	github.com/golang/protobuf v1.4.2
 	github.com/gomodule/redigo v1.8.2
 	github.com/mesos/mesos-go v0.0.11
 	github.com/opencontainers/go-digest v1.0.0 // indirect
