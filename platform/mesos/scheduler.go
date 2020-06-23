@@ -24,6 +24,7 @@ import (
 	mstore "github.com/mesos/mesos-go/api/v1/lib/extras/store"
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli"
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli/httpsched"
+	"github.com/mesos/mesos-go/api/v1/lib/resources"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/events"
@@ -296,12 +297,13 @@ func (s *Scheduler) tryRecovery(t ms.TaskID, offers []ms.Offer, force bool) (err
 		return
 	}
 	uport, _ := strconv.ParseUint(port, 10, 64)
+	taskResources := makeResources(info.CPU, info.MaxMemory, uport)
 	task := &ms.TaskInfo{
-		Name:      ip + ":" + port,
-		TaskID:    ms.TaskID{Value: fmt.Sprintf("%s:%s-%s-%d", ip, port, cluster, id+1)},
-		Executor:  s.buildExcutor(fmt.Sprintf("%s:%s", ip, port), []ms.Resource{}),
-		Resources: makeResources(info.CPU, info.MaxMemory, uport),
+		Name:     ip + ":" + port,
+		TaskID:   ms.TaskID{Value: fmt.Sprintf("%s:%s-%s-%d", ip, port, cluster, id+1)},
+		Executor: s.buildExcutor(fmt.Sprintf("%s:%s", ip, port), []ms.Resource{}),
 	}
+
 	data := &TaskData{
 		IP:         ip,
 		Port:       int(uport),
@@ -318,6 +320,7 @@ func (s *Scheduler) tryRecovery(t ms.TaskID, offers []ms.Offer, force bool) (err
 			return
 		}
 		task.AgentID = offer.GetAgentID()
+		task.Resources = resources.Find(taskResources, offer.Resources...)
 		s.db.SetTaskID(context.Background(), task.Name, task.TaskID.GetValue()+","+task.AgentID.GetValue())
 		accept := calls.Accept(calls.OfferOperations{calls.OpLaunch(*task)}.WithOffers(offer.ID))
 		err = calls.CallNoData(context.Background(), s.cli, accept)
@@ -393,14 +396,16 @@ func (s *Scheduler) acceptOffer(info *create.CacheInfo, dist *chunk.Dist, offers
 		ofm[chunk.ValidateIPAddress(offer.GetHostname())] = offer
 	}
 	for _, addr := range dist.Addrs {
+		taskResources := makeResources(info.CPU, info.MaxMemory, uint64(addr.Port))
 		task := ms.TaskInfo{
 			Name:     addr.String(),
 			TaskID:   ms.TaskID{Value: addr.String() + "-" + info.Name + "-" + "0"},
 			AgentID:  ofm[addr.IP].AgentID,
 			Executor: s.buildExcutor(addr.String(), []ms.Resource{}),
 			//  plus the port obtained by adding 10000 to the data port for redis cluster.
-			Resources: makeResources(info.CPU, info.MaxMemory, uint64(addr.Port)),
+			Resources: resources.Find(taskResources, ofm[addr.IP].Resources...),
 		}
+
 		s.db.SetTaskID(context.Background(), addr.String(), task.TaskID.GetValue()+","+task.AgentID.GetValue())
 		data := &TaskData{
 			IP:         addr.IP,
@@ -552,13 +557,14 @@ func (s *Scheduler) dispatchCluster(t job.Job, num int, mem, cpu float64, offers
 	}
 	for _, ck := range jobChunks {
 		for _, node := range ck.Nodes {
+			taskResources := makeResources(cpu, mem, uint64(node.Port))
 			task := ms.TaskInfo{
 				Name:     node.Addr(),
 				TaskID:   ms.TaskID{Value: node.Addr() + "-" + t.Name + "-" + "0"},
 				AgentID:  ofm[node.Name].AgentID,
 				Executor: s.buildExcutor(node.Addr(), []ms.Resource{}),
 				//  plus the port obtained by adding 10000 to the data port for redis cluster.
-				Resources: makeResources(cpu, mem, uint64(node.Port)),
+				Resources: resources.Find(taskResources, ofm[node.Name].Resources...),
 			}
 			taskid := task.TaskID.GetValue() + "," + task.AgentID.GetValue()
 			err = s.db.SetTaskID(context.Background(), node.Addr(), taskid)
