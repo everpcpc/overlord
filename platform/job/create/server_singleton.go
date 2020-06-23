@@ -143,7 +143,7 @@ func (c *CacheJob) setupInstanceDir() error {
 
 	err := c.e.RMDir(sub, path)
 	if err != nil {
-		log.Errorf("error clean dirty etcd dir %s", err)
+		log.Warnf("error clean dirty etcd dir %s", err)
 	}
 
 	for _, addr := range c.info.Dist.Addrs {
