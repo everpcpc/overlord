@@ -209,7 +209,7 @@ func dpFillHostRes(chunks []*Chunk, disableHost map[string]struct{}, hrs []*host
 	msg := "fill hrs result:"
 	for _, hs := range hosts {
 		if hs.count > 0 {
-			msg += fmt.Sprintf(" [%s]", hosts)
+			msg += fmt.Sprintf(" [%s]", hs)
 		}
 	}
 	log.Info(msg)
