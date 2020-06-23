@@ -16,15 +16,15 @@ func _createOffers(count int, memory float64, cpu float64, portBegin, portEnd ui
 			ID:       ms.OfferID{Value: fmt.Sprintf("offer-%d", i)},
 			Hostname: fmt.Sprintf("host-%d", i),
 			Resources: []ms.Resource{
-				ms.Resource{
+				{
 					Name:   ResNameCPUs,
 					Scalar: &ms.Value_Scalar{Value: cpu},
 				},
-				ms.Resource{
+				{
 					Name:   ResNameMem,
 					Scalar: &ms.Value_Scalar{Value: memory},
 				},
-				ms.Resource{
+				{
 					Name: ResNamePorts,
 					Ranges: &ms.Value_Ranges{
 						Range: []ms.Value_Range{{Begin: portBegin, End: portEnd}},

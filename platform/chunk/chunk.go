@@ -151,8 +151,10 @@ func mapIntoHostRes(offers []ms.Offer, mem float64, cpu float64) (hosts []*hostR
 		// we only need even count node
 		count := minInt(memNode, cpuNode, portsNode) / 2 * 2
 
-		log.Infof("[chunk] get the resources memory:%f cpu:%f ports-count:%d and finally count %d", m, c, len(ports), count)
-		hosts = append(hosts, &hostRes{name: ValidateIPAddress(offer.GetHostname()), count: count})
+		hostname := ValidateIPAddress(offer.GetHostname())
+
+		log.Infof("[chunk] get count %d from %s by resources memory:%.2f cpu:%.2f ports-count:%d", count, hostname, m, c, len(ports))
+		hosts = append(hosts, &hostRes{name: hostname, count: count})
 	}
 	return
 }
@@ -190,15 +192,13 @@ func dpFillHostRes(chunks []*Chunk, disableHost map[string]struct{}, hrs []*host
 		}
 	}
 	var all = len(chunks)*2 + count
-	for {
+	for left > 0 {
 		i := findMinHrs(hrs, hosts, disableHost, all, scale)
-		if left == 0 {
-			return
-		}
 		hosts[i].count += scale
 		left -= scale
-
 	}
+	log.Infof("fill chunk result: %v", hosts)
+	return
 }
 
 func findMinHrs(hrs, hosts []*hostRes, disableHost map[string]struct{}, max, scale int) (i int) {
@@ -467,7 +467,7 @@ func checkChunk(chunk []*Chunk, masterNum int, memory, cpu float64, offers ...ms
 // ChunksRecover recover chunk with disabled host by new offers.
 func ChunksRecover(chunks []*Chunk, host string, memory, cpu float64, offers ...ms.Offer) (newChunk []*Chunk, err error) {
 	var (
-		relateHost = make(map[string]struct{}, 0)
+		relateHost = make(map[string]struct{})
 		dpCount    int
 		allCount   = len(chunks) * 4
 	)
