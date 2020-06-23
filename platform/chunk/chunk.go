@@ -225,7 +225,7 @@ func findMinHrs(hrs, hosts []*hostRes, disableHost map[string]struct{}, max, sca
 				continue
 			}
 		}
-		if hr.count < min && hrs[i].count-hr.count >= scale {
+		if hr.count < min && hrs[idx].count-hr.count >= scale {
 			min = hr.count
 			i = idx
 		}
