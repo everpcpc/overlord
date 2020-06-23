@@ -37,7 +37,7 @@ type TaskData struct {
 	DBEndPoint string
 }
 
-func makeResources(cpu, mem float64, ports ...uint64) (r ms.Resources) {
+func makeResources(role string, cpu, mem float64, ports ...uint64) (r ms.Resources) {
 	r.Add(
 		resources.NewCPUs(cpu).Resource,
 		resources.NewMemory(mem).Resource,
@@ -47,6 +47,9 @@ func makeResources(cpu, mem float64, ports ...uint64) (r ms.Resources) {
 		portRange.Span(port, port)
 	}
 	r.Add(resources.Build().Name(resources.NamePorts).Ranges(portRange.Ranges).Resource)
+	if role != "" {
+		r = r.Allocate(role)
+	}
 	return
 }
 

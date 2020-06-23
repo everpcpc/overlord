@@ -24,6 +24,7 @@ import (
 	mstore "github.com/mesos/mesos-go/api/v1/lib/extras/store"
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli"
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli/httpsched"
+	"github.com/mesos/mesos-go/api/v1/lib/resources"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/events"
@@ -183,7 +184,7 @@ func (s *Scheduler) trackOffersReceived() eventrules.Rule {
 			offers := e.GetOffers().GetOffers()
 			log.Infof("get offer num %v ", len(offers))
 			for _, offer := range offers {
-				log.Infof("[offer detail] %v ", offer.Resources)
+				log.Infof("[offer detail][%s] %v ", offer.Hostname, offer.Resources)
 			}
 		}
 		return chain(ctx, e, err)
@@ -199,7 +200,7 @@ func (s *Scheduler) resourceOffers() events.HandlerFunc {
 
 		select {
 		case taskid := <-s.failTask:
-			s.tryRecovery(taskid, offers, false)
+			s.tryRecovery(ctx, taskid, offers, false)
 			return nil
 		default:
 		}
@@ -255,7 +256,7 @@ func (s *Scheduler) declineAndSuppress(offers []ms.Offer, ctx context.Context) {
 	_ = calls.CallNoData(ctx, s.cli, suppress)
 }
 
-func (s *Scheduler) tryRecovery(t ms.TaskID, offers []ms.Offer, force bool) (err error) {
+func (s *Scheduler) tryRecovery(ctx context.Context, t ms.TaskID, offers []ms.Offer, force bool) (err error) {
 
 	var (
 		cluster, port   string
@@ -296,12 +297,15 @@ func (s *Scheduler) tryRecovery(t ms.TaskID, offers []ms.Offer, force bool) (err
 		return
 	}
 	uport, _ := strconv.ParseUint(port, 10, 64)
+	// FIXME:(everppc) allocate with correct role
+	taskResources := makeResources(s.c.Roles[0], info.CPU, info.MaxMemory, uport)
 	task := &ms.TaskInfo{
-		Name:      ip + ":" + port,
-		TaskID:    ms.TaskID{Value: fmt.Sprintf("%s:%s-%s-%d", ip, port, cluster, id+1)},
-		Executor:  s.buildExcutor(fmt.Sprintf("%s:%s", ip, port), []ms.Resource{}),
-		Resources: makeResources(info.CPU, info.MaxMemory, uport),
+		Name:     ip + ":" + port,
+		TaskID:   ms.TaskID{Value: fmt.Sprintf("%s:%s-%s-%d", ip, port, cluster, id+1)},
+		Executor: s.buildExcutor(fmt.Sprintf("%s:%s", ip, port), []ms.Resource{}),
 	}
+	log.Infof("[%s] task resource: %v", task.TaskID, taskResources)
+
 	data := &TaskData{
 		IP:         ip,
 		Port:       int(uport),
@@ -312,15 +316,25 @@ func (s *Scheduler) tryRecovery(t ms.TaskID, offers []ms.Offer, force bool) (err
 		if chunk.ValidateIPAddress(offer.Hostname) != ip {
 			continue
 		}
+		flattened := ms.Resources(offer.Resources).ToUnreserved()
+		log.Infof("[%s] offered resource: %v", offer.Hostname, flattened)
 
 		// try to recover from origin agent with the same info.
-		if err = checkOffer(offer, info.CPU, info.MaxMemory, uport); err != nil {
+		if !resources.ContainsAll(flattened, taskResources) {
+			err = fmt.Errorf("resource not enough on %s for %s, need more: %s",
+				offer.Hostname, task.TaskID,
+				taskResources.Subtract(flattened...))
 			return
 		}
+		// if err = checkOffer(offer, info.CPU, info.MaxMemory, uport); err != nil {
+		// 	return
+		// }
+
 		task.AgentID = offer.GetAgentID()
-		s.db.SetTaskID(context.Background(), task.Name, task.TaskID.GetValue()+","+task.AgentID.GetValue())
+		task.Resources = resources.Find(taskResources, offer.Resources...)
+		s.db.SetTaskID(ctx, task.Name, task.TaskID.GetValue()+","+task.AgentID.GetValue())
 		accept := calls.Accept(calls.OfferOperations{calls.OpLaunch(*task)}.WithOffers(offer.ID))
-		err = calls.CallNoData(context.Background(), s.cli, accept)
+		err = calls.CallNoData(ctx, s.cli, accept)
 		if err != nil {
 			log.Errorf("try recover task from origin agent fail %v", err)
 			// try recovery from other host later
@@ -393,14 +407,16 @@ func (s *Scheduler) acceptOffer(info *create.CacheInfo, dist *chunk.Dist, offers
 		ofm[chunk.ValidateIPAddress(offer.GetHostname())] = offer
 	}
 	for _, addr := range dist.Addrs {
+		taskResources := makeResources(s.c.Roles[0], info.CPU, info.MaxMemory, uint64(addr.Port))
 		task := ms.TaskInfo{
 			Name:     addr.String(),
 			TaskID:   ms.TaskID{Value: addr.String() + "-" + info.Name + "-" + "0"},
 			AgentID:  ofm[addr.IP].AgentID,
 			Executor: s.buildExcutor(addr.String(), []ms.Resource{}),
 			//  plus the port obtained by adding 10000 to the data port for redis cluster.
-			Resources: makeResources(info.CPU, info.MaxMemory, uint64(addr.Port)),
+			Resources: resources.Find(taskResources, ofm[addr.IP].Resources...),
 		}
+
 		s.db.SetTaskID(context.Background(), addr.String(), task.TaskID.GetValue()+","+task.AgentID.GetValue())
 		data := &TaskData{
 			IP:         addr.IP,
@@ -552,13 +568,14 @@ func (s *Scheduler) dispatchCluster(t job.Job, num int, mem, cpu float64, offers
 	}
 	for _, ck := range jobChunks {
 		for _, node := range ck.Nodes {
+			taskResources := makeResources(s.c.Roles[0], cpu, mem, uint64(node.Port))
 			task := ms.TaskInfo{
 				Name:     node.Addr(),
 				TaskID:   ms.TaskID{Value: node.Addr() + "-" + t.Name + "-" + "0"},
 				AgentID:  ofm[node.Name].AgentID,
 				Executor: s.buildExcutor(node.Addr(), []ms.Resource{}),
 				//  plus the port obtained by adding 10000 to the data port for redis cluster.
-				Resources: makeResources(cpu, mem, uint64(node.Port)),
+				Resources: resources.Find(taskResources, ofm[node.Name].Resources...),
 			}
 			taskid := task.TaskID.GetValue() + "," + task.AgentID.GetValue()
 			err = s.db.SetTaskID(context.Background(), node.Addr(), taskid)
@@ -767,7 +784,7 @@ func (s *Scheduler) restartNode(job job.Job, offers []ms.Offer) (err error) {
 	taskid := ms.TaskID{
 		Value: id,
 	}
-	if err = s.tryRecovery(taskid, offers, true); err != nil {
+	if err = s.tryRecovery(ctx, taskid, offers, true); err != nil {
 		log.Errorf("try restart node from origin agent fail: %v", err)
 	}
 	return
