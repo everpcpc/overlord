@@ -27,6 +27,7 @@ const (
 var (
 	ErrNotEnoughHost     = errors.New("host is not enough with")
 	ErrNotEnoughResource = errors.New("resource is not fully satisfied by the offers")
+	ErrNotEnoughChunk    = errors.New("filled chunks less than required")
 
 	ErrBadMasterNum = errors.New("master number must be even")
 	ErrNot3Not4     = errors.New("can not deploy 4 instance with 3 host")
@@ -153,7 +154,11 @@ func mapIntoHostRes(offers []ms.Offer, mem float64, cpu float64) (hosts []*hostR
 
 		hostname := ValidateIPAddress(offer.GetHostname())
 
-		log.Infof("[chunk] get count %d from %s by resources memory:%.2f cpu:%.2f ports-count:%d", count, hostname, m, c, len(ports))
+		if count > 0 {
+			log.Infof("[chunk] get count %d from %s by resources memory:%.2f cpu:%.2f ports-count:%d", count, hostname, m, c, len(ports))
+		} else {
+			log.Infof("[chunk] ignore %s with resources memory:%.2f cpu:%.2f ports-count:%d", hostname, m, c, len(ports))
+		}
 		hosts = append(hosts, &hostRes{name: hostname, count: count})
 	}
 	return
@@ -194,14 +199,25 @@ func dpFillHostRes(chunks []*Chunk, disableHost map[string]struct{}, hrs []*host
 	var all = len(chunks)*2 + count
 	for left > 0 {
 		i := findMinHrs(hrs, hosts, disableHost, all, scale)
+		if i < 0 {
+			log.Errorf("find min hrs error with: %+v -{%+v}", hosts, disableHost)
+			break
+		}
 		hosts[i].count += scale
 		left -= scale
 	}
-	log.Infof("fill chunk result: %v", hosts)
+	msg := "fill hrs result:"
+	for _, hs := range hosts {
+		if hs.count > 0 {
+			msg += fmt.Sprintf(" [%s]", hosts)
+		}
+	}
+	log.Info(msg)
 	return
 }
 
-func findMinHrs(hrs, hosts []*hostRes, disableHost map[string]struct{}, max, scale int) (i int) {
+func findMinHrs(hrs, hosts []*hostRes, disableHost map[string]struct{}, max, scale int) int {
+	var i = -1
 	var min = max
 	for idx, hr := range hosts {
 		if disableHost != nil {
@@ -214,7 +230,7 @@ func findMinHrs(hrs, hosts []*hostRes, disableHost map[string]struct{}, max, sca
 			i = idx
 		}
 	}
-	return
+	return i
 }
 
 func findMinLink(lt [][]int, m int) int {
@@ -461,6 +477,13 @@ func checkChunk(chunk []*Chunk, masterNum int, memory, cpu float64, offers ...ms
 		hrmap[hr.name] = i
 	}
 	hrs = dpFillHostRes(chunk, nil, hrs, masterNum*2, 2) // NOTICE: each master is a half chunk
+	total := 0
+	for _, hr := range hrs {
+		total += hr.count
+	}
+	if total != masterNum*2 {
+		err = ErrNotEnoughChunk
+	}
 	return
 }
 
