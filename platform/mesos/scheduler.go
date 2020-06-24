@@ -297,7 +297,8 @@ func (s *Scheduler) tryRecovery(ctx context.Context, t ms.TaskID, offers []ms.Of
 		return
 	}
 	uport, _ := strconv.ParseUint(port, 10, 64)
-	taskResources := makeResources(info.CPU, info.MaxMemory, uport)
+	// FIXME:(everppc) allocate with correct role
+	taskResources := makeResources(info.CPU, info.MaxMemory, uport).Allocate(s.c.Roles[0])
 	task := &ms.TaskInfo{
 		Name:     ip + ":" + port,
 		TaskID:   ms.TaskID{Value: fmt.Sprintf("%s:%s-%s-%d", ip, port, cluster, id+1)},
