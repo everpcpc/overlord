@@ -298,7 +298,7 @@ func (s *Scheduler) tryRecovery(ctx context.Context, t ms.TaskID, offers []ms.Of
 	}
 	uport, _ := strconv.ParseUint(port, 10, 64)
 	// FIXME:(everppc) allocate with correct role
-	taskResources := makeResources(info.CPU, info.MaxMemory, uport).Allocate(s.c.Roles[0])
+	taskResources := makeResources(s.c.Roles[0], info.CPU, info.MaxMemory, uport)
 	task := &ms.TaskInfo{
 		Name:     ip + ":" + port,
 		TaskID:   ms.TaskID{Value: fmt.Sprintf("%s:%s-%s-%d", ip, port, cluster, id+1)},
@@ -407,7 +407,7 @@ func (s *Scheduler) acceptOffer(info *create.CacheInfo, dist *chunk.Dist, offers
 		ofm[chunk.ValidateIPAddress(offer.GetHostname())] = offer
 	}
 	for _, addr := range dist.Addrs {
-		taskResources := makeResources(info.CPU, info.MaxMemory, uint64(addr.Port))
+		taskResources := makeResources(s.c.Roles[0], info.CPU, info.MaxMemory, uint64(addr.Port))
 		task := ms.TaskInfo{
 			Name:     addr.String(),
 			TaskID:   ms.TaskID{Value: addr.String() + "-" + info.Name + "-" + "0"},
@@ -568,7 +568,7 @@ func (s *Scheduler) dispatchCluster(t job.Job, num int, mem, cpu float64, offers
 	}
 	for _, ck := range jobChunks {
 		for _, node := range ck.Nodes {
-			taskResources := makeResources(cpu, mem, uint64(node.Port))
+			taskResources := makeResources(s.c.Roles[0], cpu, mem, uint64(node.Port))
 			task := ms.TaskInfo{
 				Name:     node.Addr(),
 				TaskID:   ms.TaskID{Value: node.Addr() + "-" + t.Name + "-" + "0"},
