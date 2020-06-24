@@ -303,6 +303,7 @@ func (s *Scheduler) tryRecovery(ctx context.Context, t ms.TaskID, offers []ms.Of
 		TaskID:   ms.TaskID{Value: fmt.Sprintf("%s:%s-%s-%d", ip, port, cluster, id+1)},
 		Executor: s.buildExcutor(fmt.Sprintf("%s:%s", ip, port), []ms.Resource{}),
 	}
+	log.Infof("[%s] task resource: %v", task.TaskID, taskResources)
 
 	data := &TaskData{
 		IP:         ip,
@@ -315,6 +316,7 @@ func (s *Scheduler) tryRecovery(ctx context.Context, t ms.TaskID, offers []ms.Of
 			continue
 		}
 		flattened := ms.Resources(offer.Resources).ToUnreserved()
+		log.Infof("[%s] offered resource: %v", offer.Hostname, flattened)
 
 		// try to recover from origin agent with the same info.
 		if !resources.ContainsAll(flattened, taskResources) {
