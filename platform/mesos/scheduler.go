@@ -200,7 +200,7 @@ func (s *Scheduler) resourceOffers() events.HandlerFunc {
 
 		select {
 		case taskid := <-s.failTask:
-			s.tryRecovery(taskid, offers, false)
+			s.tryRecovery(ctx, taskid, offers, false)
 			return nil
 		default:
 		}
@@ -256,7 +256,7 @@ func (s *Scheduler) declineAndSuppress(offers []ms.Offer, ctx context.Context) {
 	_ = calls.CallNoData(ctx, s.cli, suppress)
 }
 
-func (s *Scheduler) tryRecovery(t ms.TaskID, offers []ms.Offer, force bool) (err error) {
+func (s *Scheduler) tryRecovery(ctx context.Context, t ms.TaskID, offers []ms.Offer, force bool) (err error) {
 
 	var (
 		cluster, port   string
@@ -314,16 +314,24 @@ func (s *Scheduler) tryRecovery(t ms.TaskID, offers []ms.Offer, force bool) (err
 		if chunk.ValidateIPAddress(offer.Hostname) != ip {
 			continue
 		}
+		flattened := ms.Resources(offer.Resources).ToUnreserved()
 
 		// try to recover from origin agent with the same info.
-		if err = checkOffer(offer, info.CPU, info.MaxMemory, uport); err != nil {
+		if !resources.ContainsAll(flattened, taskResources) {
+			err = fmt.Errorf("resource not enough on %s for %s, need more: %s",
+				offer.Hostname, task.TaskID,
+				taskResources.Subtract(flattened...))
 			return
 		}
+		// if err = checkOffer(offer, info.CPU, info.MaxMemory, uport); err != nil {
+		// 	return
+		// }
+
 		task.AgentID = offer.GetAgentID()
 		task.Resources = resources.Find(taskResources, offer.Resources...)
-		s.db.SetTaskID(context.Background(), task.Name, task.TaskID.GetValue()+","+task.AgentID.GetValue())
+		s.db.SetTaskID(ctx, task.Name, task.TaskID.GetValue()+","+task.AgentID.GetValue())
 		accept := calls.Accept(calls.OfferOperations{calls.OpLaunch(*task)}.WithOffers(offer.ID))
-		err = calls.CallNoData(context.Background(), s.cli, accept)
+		err = calls.CallNoData(ctx, s.cli, accept)
 		if err != nil {
 			log.Errorf("try recover task from origin agent fail %v", err)
 			// try recovery from other host later
@@ -773,7 +781,7 @@ func (s *Scheduler) restartNode(job job.Job, offers []ms.Offer) (err error) {
 	taskid := ms.TaskID{
 		Value: id,
 	}
-	if err = s.tryRecovery(taskid, offers, true); err != nil {
+	if err = s.tryRecovery(ctx, taskid, offers, true); err != nil {
 		log.Errorf("try restart node from origin agent fail: %v", err)
 	}
 	return
