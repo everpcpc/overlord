@@ -184,7 +184,7 @@ func (s *Scheduler) trackOffersReceived() eventrules.Rule {
 			offers := e.GetOffers().GetOffers()
 			log.Infof("get offer num %v ", len(offers))
 			for _, offer := range offers {
-				log.Infof("[offer detail] %v ", offer.Resources)
+				log.Infof("[offer detail][%s] %v ", offer.Hostname, offer.Resources)
 			}
 		}
 		return chain(ctx, e, err)
