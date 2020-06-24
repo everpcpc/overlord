@@ -209,7 +209,7 @@ func (d *Dao) GetCluster(ctx context.Context, cname string) (*model.Cluster, err
 		Appids:       appids,
 		FrontEndPort: int(fePort),
 		MaxMemory:    info.MaxMemory,
-		Thread:       info.Thread,
+		CPU:          info.CPU,
 		Version:      info.Version,
 		Number:       info.Number,
 		State:        clusterState,

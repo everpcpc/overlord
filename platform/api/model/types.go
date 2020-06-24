@@ -39,7 +39,7 @@ type Cluster struct {
 	FrontEndPort int      `json:"front_end_port"`
 
 	CacheType string  `json:"cache_type"`
-	Thread    int     `json:"cpu" validate:"required"`
+	CPU       float64 `json:"cpu" validate:"required"`
 	MaxMemory float64 `json:"max_memory"`
 	Version   string  `json:"version" validate:"required"`
 	Number    int     `json:"number" validate:"required"`
