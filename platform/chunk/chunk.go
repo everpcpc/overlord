@@ -313,7 +313,7 @@ func checkIfEnough(hrs []*hostRes, need int) bool {
 
 func checkDist(hrs []*hostRes, count int) bool {
 	for _, hr := range hrs {
-		if hr.count >= count/2 {
+		if hr.count > count/2 {
 			return false
 		}
 	}
