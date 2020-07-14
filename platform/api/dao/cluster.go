@@ -268,12 +268,33 @@ func (d *Dao) RemoveCluster(ctx context.Context, cname string) (jobid string, er
 	}
 
 	j, err := d.createDestroyClusterJob(ctx, cname)
-	if err != nil {
+	if err == nil {
+		jobid, err = d.saveJob(ctx, j)
+		return
+	}
+	if !client.IsKeyNotFound(err) {
 		log.Errorf("create destroy cluster job fail %v", err)
 		return
 	}
-	jobid, err = d.saveJob(ctx, j)
-	return
+
+	log.Warn("cluster has no info, destroy directly, job should be deleted manually")
+	// clear etcd info
+	// NOTE: same as scheduler.destroyCluster
+	var nodes []*etcd.Node
+	nodes, err = d.e.LS(ctx, fmt.Sprintf(etcd.ClusterInstancesDir, cname))
+	if err != nil {
+		log.Errorf("get cluster(%s) nodes info err %v", cname, err)
+	}
+	d.e.RMDir(ctx, fmt.Sprintf("%s/%s", etcd.ClusterDir, cname))
+	for _, node := range nodes {
+		err = d.e.RMDir(ctx, etcd.InstanceDirPrefix+"/"+node.Value)
+		if err != nil {
+			log.Errorf("rm instance dir (%s) fail err %v", node.Value, err)
+		} else {
+			log.Infof("instance dir (%s) removed", node.Value)
+		}
+	}
+	return "", nil
 }
 
 // CreateCluster will create new cluster
